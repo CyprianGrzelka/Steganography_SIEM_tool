@@ -17,14 +17,35 @@ stego_scan.log
 steg-lab/wyniki_testy.csv
 steg-lab/wyniki_testy.json
 
-# Obrazy i pliki testowe (sample_images to duże pliki binarne)
-steg-lab/sample_images/
-sample_images/
+# Pliki binarne — obrazy, audio, wideo (żadne nie należą do repozytorium)
+*.png
+*.jpg
+*.jpeg
+*.jfif
+*.bmp
+*.gif
+*.tiff
+*.tif
+*.pgm
+*.webp
+*.ico
+*.svg
 
-# Pliki audio
 *.wav
 *.mp3
 *.flac
+*.aac
+*.ogg
+
+*.mp4
+*.avi
+*.mkv
+*.mov
+*.webm
+
+# Foldery z próbkami (redundantnie, dla pewności)
+steg-lab/sample_images/
+sample_images/
 
 # Pliki sieciowe (pcap)
 *.pcap
