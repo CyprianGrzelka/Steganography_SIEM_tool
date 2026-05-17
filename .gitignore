@@ -1,0 +1,61 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Logi
+*.log
+stego_scan.log
+
+# Wyniki testów (generowane automatycznie)
+steg-lab/wyniki_testy.csv
+steg-lab/wyniki_testy.json
+
+# Obrazy i pliki testowe (sample_images to duże pliki binarne)
+steg-lab/sample_images/
+sample_images/
+
+# Pliki audio
+*.wav
+*.mp3
+*.flac
+
+# Pliki sieciowe (pcap)
+*.pcap
+*.pcapng
+*.cap
+
+# Zmienne środowiskowe
+.env
+.env.*
+!.env.example
+
+# Docker volumes i dane lokalne
+docker-volumes/
+data/
+elasticsearch-data/
+logstash-data/
+kibana-data/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Claude Code settings (lokalne)
+.claude/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini
