@@ -4,7 +4,7 @@ common.py — SharedResult dataclass i logika werdyktu dla wszystkich detektoró
 
 import json
 from dataclasses import dataclass, field, asdict
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, ClassVar
 from datetime import datetime, timezone
 
 
@@ -13,35 +13,70 @@ class SharedResult:
     """
     Ujednolicony format wyniku z każdego detektora.
     Serializowalny bezpośrednio do JSON.
+
+    Każde zdarzenie (obraz, audio, wideo, sieć) ma identyczne pola najwyższego
+    poziomu — null tam gdzie pole nie ma zastosowania.  Dzięki temu Elasticsearch
+    buduje spójne mapowanie, a Kibana nie duplikuje wykresów.
+
+    Pola stałe (zawsze obecne):
+      timestamp, event_type, source_module,
+      file_name, file_path, file_size_bytes, file_format,
+      verdict, risk_score, detectors_triggered, detectors_total,
+      detectors, warnings, network_channel
+
+    Pole opcjonalne (pomijane gdy None):
+      errors  — komunikat błędu analizy
     """
     timestamp: str  # ISO 8601 UTC
     event_type: str = "stego_scan"
-    source_module: str = "unknown"  # image, audio, video, network
+    source_module: str = "unknown"  # image | audio | video | network
 
-    # File/source metadata
-    file_name: str = ""
-    file_path: str = ""
+    # File/source metadata — null for pure network-traffic events
+    file_name: Optional[str] = None
+    file_path: Optional[str] = None
     file_size_bytes: Optional[int] = None
-    file_format: str = ""
+    file_format: Optional[str] = None
 
     # Detection results
-    verdict: str = "CLEAN"  # CLEAN, SUSPICIOUS, DETECTED
-    risk_score: int = 0  # 0-100
+    verdict: str = "CLEAN"  # CLEAN | SUSPICIOUS | DETECTED
+    risk_score: int = 0     # 0-100
     detectors_triggered: int = 0
     detectors_total: int = 0
 
-    # Detector-specific fields (dynamic dict for flexibility)
+    # Detector-specific details (structure varies by source_module)
     detectors: Dict[str, Any] = field(default_factory=dict)
 
-    # Additional metadata
+    # Metadata
     warnings: list = field(default_factory=list)
+
+    # Network-only: which covert channel was analysed
+    # null for image / audio / video events
+    network_channel: Optional[str] = None
+
+    # Analysis error message — omitted from JSON when None
     errors: Optional[str] = None
 
+    # Ordered list of fields that are always present in the serialised event.
+    # Guarantees a consistent Elasticsearch mapping regardless of source_module.
+    _SCHEMA_FIELDS: ClassVar[tuple] = (
+        "timestamp", "event_type", "source_module",
+        "file_name", "file_path", "file_size_bytes", "file_format",
+        "verdict", "risk_score", "detectors_triggered", "detectors_total",
+        "detectors", "warnings", "network_channel",
+    )
+
     def to_json_dict(self) -> dict:
-        """Convert to dict for JSON serialization, excluding None values."""
+        """
+        Serialize to dict with a fixed field order.
+
+        All _SCHEMA_FIELDS are always present (null when not applicable).
+        The 'errors' field is appended only when not None.
+        """
         data = asdict(self)
-        # Remove None values for cleaner JSON
-        return {k: v for k, v in data.items() if v is not None or k in ["errors"]}
+        result = {key: data[key] for key in self._SCHEMA_FIELDS}
+        if data["errors"] is not None:
+            result["errors"] = data["errors"]
+        return result
 
     def to_ndjson_line(self) -> str:
         """Return single-line JSON suitable for NDJSON format."""

@@ -95,27 +95,25 @@ def extract_message(stego_audio, group_size=8):
         print(f"[!] Błąd dekodowania wiadomości: {e}")
         return ""
 
-hide_message("input_10.wav", "Hello World!", "output_stego.wav")
-msg = extract_message("output_stego.wav")
-print("Odczytana wiadomość z pliku 10sek:", msg)
+if __name__ == "__main__":
+    hide_message("input_10.wav", "Hello World!", "output_stego.wav")
+    msg = extract_message("output_stego.wav")
+    print("Odczytana wiadomość z pliku 10sek:", msg)
 
-hide_message("input_30.wav", """Jak korzystać z Generatora Losowych Słów?
+    hide_message("input_30.wav", """Jak korzystać z Generatora Losowych Słów?
 Wybór typu słów: Korzystanie z naszego Generatora Losowych Słów jest niezwykle proste i intuicyjne. Po pierwsze, musisz zdecydować, jaki rodzaj słów chcesz wygenerować. Możesz wybrać z trzech głównych kategorii: rzeczowniki, czasowniki, i przymiotniki. Każda z tych kategorii pomoże Ci dopasować słowa do specyficznych potrzeb – czy to pisania kreatywnego, nauki języka, czy organizacji gier.
 Ustawienia dodatkowe: Oprócz wyboru kategorii słów, możesz także dostosować inne parametry generacji. Do wyboru masz między innymi:
 Liczbę słów do wygenerowania: od jednego do wielu, w zależności od Twoich potrzeb.
 Filtr słów według pierwszej litery, ostatniej litery lub długości słowa, co pozwala na jeszcze większe spersonalizowanie wyników.
-Proces generowania Po dokonaniu wszystkich wyborów, wystarczy kliknąć przycisk „Generuj”. Słowa zostaną natychmiastowo wygenerowane i wyświetlone na ekranie. Możesz wygenerować nową listę słów tyle razy, ile tylko chcesz.
+Proces generowania Po dokonaniu wszystkich wyborów, wystarczy kliknąć przycisk „Generuj". Słowa zostaną natychmiastowo wygenerowane i wyświetlone na ekranie. Możesz wygenerować nową listę słów tyle razy, ile tylko chcesz.
 """, "output_stego_30.wav")
-# Odczytywanie
 
-msg2 = extract_message("output_stego_30.wav")
-print("Odczytana długa wiadomość z pliku 30sek:", msg2)
+    msg2 = extract_message("output_stego_30.wav")
+    print("Odczytana długa wiadomość z pliku 30sek:", msg2)
 
+    msg3 = extract_message("input_10.wav")
+    print("Odczytana wiadomość z pliku:", msg3)
 
-#Próba odczytania pliku niezakodowanego
-msg3 = extract_message("input_10.wav")
-print("Odczytana wiadomość z pliku:", msg3)
-
-# Próba ukrycia 1 MB wiadomości w małym pliku
-too_long = "A" * 10**6
-hide_message("input_10.wav", too_long, "fail.wav")
+    # Próba ukrycia 1 MB wiadomości w małym pliku
+    too_long = "A" * 10**6
+    hide_message("input_10.wav", too_long, "fail.wav")

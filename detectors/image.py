@@ -19,6 +19,13 @@ from chi_square import ChiSquareDetector as _ChiSquareDetector
 from rs_analysis import RSAnalysisDetector as _RSAnalysisDetector
 from shannon_entropy import ShannonEntropyDetector as _ShannonEntropyDetector
 
+# image_profiler lives in the same detectors/ package
+_DETECTORS_DIR = Path(__file__).parent
+if str(_DETECTORS_DIR) not in sys.path:
+    sys.path.insert(0, str(_DETECTORS_DIR))
+
+from image_profiler import profile_image as _profile_image
+
 
 class ImageDetector:
     """Unified detector for images using chi-square, RS analysis, and Shannon entropy."""
@@ -77,6 +84,15 @@ class ImageDetector:
             warnings = []
             pil_image = None
 
+            # Probe image characteristics and get detector-specific weights.
+            # Falls back to DEFAULT_WEIGHTS if profiler fails (e.g., corrupt header).
+            try:
+                profile = _profile_image(filepath)
+                weights = profile["weights"]
+                warnings.extend(profile.get("warnings", []))
+            except Exception:
+                weights = self.DEFAULT_WEIGHTS
+
             # Convert lossy formats to PNG in memory for analysis
             if ext in self.LOSSY_FORMATS:
                 src = Image.open(filepath)
@@ -96,11 +112,11 @@ class ImageDetector:
             rs_result = self.rs_detector.analyze(filepath, pil_image)
             ent_result = self.ent_detector.analyze(filepath, pil_image)
 
-            # Calculate risk score
+            # Calculate risk score using profiler-adjusted weights
             risk = int(round((
-                chi_result["confidence"] * self.DEFAULT_WEIGHTS["chi_square"] +
-                rs_result["confidence"] * self.DEFAULT_WEIGHTS["rs_analysis"] +
-                ent_result["confidence"] * self.DEFAULT_WEIGHTS["shannon_entropy"]
+                chi_result["confidence"] * weights["chi_square"] +
+                rs_result["confidence"] * weights["rs_analysis"] +
+                ent_result["confidence"] * weights["shannon_entropy"]
             ) * 100))
 
             # Count detectors triggered
@@ -126,16 +142,19 @@ class ImageDetector:
                         "p_value": chi_result.get("p_value"),
                         "detected": chi_result.get("detected", False),
                         "confidence": chi_result.get("confidence", 0.0),
+                        "weight": weights["chi_square"],
                     },
                     "rs_analysis": {
                         "rs_difference": rs_result.get("rs_difference"),
                         "detected": rs_result.get("detected", False),
                         "confidence": rs_result.get("confidence", 0.0),
+                        "weight": weights["rs_analysis"],
                     },
                     "shannon_entropy": {
                         "entropy": ent_result.get("entropy"),
                         "detected": ent_result.get("detected", False),
                         "confidence": ent_result.get("confidence", 0.0),
+                        "weight": weights["shannon_entropy"],
                     },
                 },
             )

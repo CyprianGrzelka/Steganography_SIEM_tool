@@ -16,11 +16,14 @@ import argparse
 from pathlib import Path
 from datetime import datetime, timezone
 
-# Add project root to path
+# Add project root and steg-lab to path
 _PROJECT_ROOT = Path(__file__).parent
+_STEG_LAB = _PROJECT_ROOT / "steg-lab"
 sys.path.insert(0, str(_PROJECT_ROOT))
+sys.path.insert(0, str(_STEG_LAB))
 
 from detectors import ImageDetector, AudioDetector, NetworkDetector
+from video_detector import VideoDetector
 
 # Setup logging
 def setup_logging(logfile: str = "stego_agent.log"):
@@ -69,6 +72,7 @@ class StegoAgent:
         self.image_detector = ImageDetector()
         self.audio_detector = AudioDetector()
         self.network_detector = NetworkDetector()
+        self.video_detector = VideoDetector()
         self.processed_files = set()
 
     def analyze_file(self, filepath: str) -> dict:
@@ -97,13 +101,35 @@ class StegoAgent:
             elif ext in AUDIO_FORMATS:
                 result = self.audio_detector.analyze(filepath)
             elif ext in VIDEO_FORMATS:
-                logger.warning(f"Video format {ext} not yet implemented")
+                raw = self.video_detector.analyze(filepath)
                 return {
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "event_type": "stego_scan",
-                    "file_name": os.path.basename(filepath),
-                    "file_path": os.path.abspath(filepath),
-                    "errors": f"Video format {ext} not yet implemented",
+                    "timestamp":           datetime.now(timezone.utc).isoformat(),
+                    "event_type":          "stego_scan",
+                    "source_module":       "video",
+                    "file_name":           os.path.basename(filepath),
+                    "file_path":           os.path.abspath(filepath),
+                    "file_size_bytes":     os.path.getsize(filepath),
+                    "file_format":         ext.upper().lstrip(".") or "UNKNOWN",
+                    "verdict":             raw.get("verdict", "CLEAN"),
+                    "risk_score":          raw.get("risk_score", 0),
+                    "detectors_triggered": raw.get("detectors_triggered", 0),
+                    "detectors_total":     3,
+                    "detectors": {
+                        "chi_square":   {"detection_rate": raw.get("chi_detection_rate")},
+                        "rs_analysis":  {"detection_rate": raw.get("rs_detection_rate")},
+                        "temporal":     {
+                            "suspicious": raw.get("temporal_suspicious"),
+                            "variance":   raw.get("temporal_variance"),
+                        },
+                        "video_meta":   {
+                            "fps":              raw.get("fps"),
+                            "duration_seconds": raw.get("duration_seconds"),
+                            "total_frames":     raw.get("total_frames"),
+                            "frames_analyzed":  raw.get("frames_analyzed"),
+                        },
+                    },
+                    "warnings":        [],
+                    "network_channel": None,
                 }
             elif ext in NETWORK_FORMATS:
                 result = self.network_detector.analyze(filepath)
