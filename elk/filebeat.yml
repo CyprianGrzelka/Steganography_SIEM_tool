@@ -1,0 +1,51 @@
+# filebeat.yml — Configuration for monitoring stego_events.ndjson
+
+filebeat.inputs:
+- type: log
+  enabled: true
+  paths:
+    - /stego_events.ndjson
+
+  # Parse each line as JSON (NDJSON format)
+  json.keys_under_root: true
+  json.add_error_key: true
+
+  # Tag for identifying stego-module events
+  tags: ["stego-module"]
+
+  # Don't read from start of file if restarting (prevent duplicates)
+  ignore_older: 24h
+
+# Template setup — disabled because we installed it manually in ES
+setup.template.enabled: false
+
+# Output to Elasticsearch
+output.elasticsearch:
+  # Elasticsearch hosts (Docker service name)
+  hosts:
+    - "elasticsearch:9200"
+
+  # Index name with date pattern
+  index: "stego-events-%{+yyyy.MM.dd}"
+
+  # Optional: Basic auth (uncomment if needed)
+  # username: "elastic"
+  # password: "your_password"
+
+# Logging
+logging.level: info
+logging.to_files: true
+logging.files:
+  path: ./filebeat
+  name: filebeat
+  keepfiles: 7
+  permissions: 0644
+
+# General settings
+filebeat.registry.path: .filebeat
+filebeat.registry.file_permissions: 0600
+
+# HTTP server for metrics (optional)
+# http.enabled: true
+# http.host: localhost
+# http.port: 5066

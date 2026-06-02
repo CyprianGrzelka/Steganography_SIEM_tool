@@ -1,0 +1,1 @@
+{"type":"dashboard","id":"stego-siem-dashboard","attributes":{"title":"Steganography Detection - SIEM Dashboard","panels":[],"timeRestore":false,"timeFrom":"now-24h","timeTo":"now"}}
