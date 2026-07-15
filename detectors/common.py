@@ -25,6 +25,24 @@ _RULE_SHORT: dict = {
 # Rules whose metric value is a count — formatted as integer, not float
 _INT_VALUE_RULES: frozenset = frozenset({"dns_subdomain_length", "dns_base32"})
 
+# Mapping: detector key → (short_label, candidate_metric_fields_tuple, is_int)
+# Candidate fields are tried in order; first non-None wins.
+# chi_square and rs_analysis differ between image (p_value/rs_difference)
+# and video (detection_rate), so both are listed.
+_DETECTOR_SHORT: dict = {
+    "chi_square":         ("chi²",       ("p_value", "detection_rate"),        False),
+    "rs_analysis":        ("RS",         ("rs_difference", "detection_rate"),   False),
+    "shannon_entropy":    ("H",          ("entropy",),                          False),
+    "temporal":           ("temporal",   ("variance",),                         False),
+    "audio_group_parity": ("parity_dev", ("score",),                            False),
+    "dns_tunneling":      ("DNS_H",      ("entropy",),                          False),
+    "icmp_tunneling":     ("ICMP",       ("confidence",),                       False),
+    "iat_steganography":  ("IAT",        ("confidence",),                       False),
+}
+
+# Keys in `detectors` dict that are metadata, not detection results — skip in summary
+_SKIP_DETECTOR_KEYS: frozenset = frozenset({"video_meta"})
+
 
 def build_triggered_rules_summary(triggered_rules: list) -> str:
     """Compact display string built from triggered_rules list (rule + value only)."""
@@ -36,6 +54,34 @@ def build_triggered_rules_summary(triggered_rules: list) -> str:
         fmt = str(int(val)) if rule in _INT_VALUE_RULES else f"{val:.3f}"
         parts.append(f"{short}={fmt}")
     return " | ".join(parts)
+
+
+def build_all_detectors_summary(detectors: dict) -> str:
+    """
+    Compact summary for events where no rule triggered (CLEAN verdict).
+    Shows each detector's primary metric value in the same format as
+    build_triggered_rules_summary. Example: "chi²=0.000 | RS=0.008 | H=4.347"
+    Metadata-only keys (video_meta) are skipped.
+    """
+    parts = []
+    for det_name, det_data in detectors.items():
+        if det_name in _SKIP_DETECTOR_KEYS or not isinstance(det_data, dict):
+            continue
+        entry = _DETECTOR_SHORT.get(det_name)
+        if entry is None:
+            short, candidate_fields, is_int = det_name, (), False
+        else:
+            short, candidate_fields, is_int = entry
+        val = None
+        for field in candidate_fields:
+            val = det_data.get(field)
+            if val is not None:
+                break
+        if val is None:
+            val = 0.0
+        fmt = str(int(val)) if is_int else f"{float(val):.3f}"
+        parts.append(f"{short}={fmt}")
+    return " | ".join(parts) if parts else "all_detectors_passed"
 
 
 @dataclass
@@ -102,8 +148,13 @@ class SharedResult:
     )
 
     def __post_init__(self):
-        if not self.triggered_rules_summary and self.triggered_rules:
-            self.triggered_rules_summary = build_triggered_rules_summary(self.triggered_rules)
+        if not self.triggered_rules_summary:
+            if self.triggered_rules:
+                self.triggered_rules_summary = build_triggered_rules_summary(self.triggered_rules)
+            elif self.detectors:
+                self.triggered_rules_summary = build_all_detectors_summary(self.detectors)
+            else:
+                self.triggered_rules_summary = "all_detectors_passed"
 
     def to_json_dict(self) -> dict:
         """
